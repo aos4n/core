@@ -1,0 +1,66 @@
+{
+  "name": "aos4n-core",
+  "version": "0.0.1",
+  "description": "aos4n-core",
+  "main": "bin/index.js",
+  "files": [
+    "bin"
+  ],
+  "scripts": {
+    "tsc": "tsc",
+    "tscw": "tsc -w",
+    "prepublishOnly": "tsc",
+    "test": "jest --silent --no-watchman"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aos4n/core.git"
+  },
+  "keywords": [
+    "nodejs",
+    "typescript"
+  ],
+  "author": "aos4n",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/aos4n/core/issues"
+  },
+  "homepage": "https://github.com/aos4n/core#readme",
+  "dependencies": {
+    "reflect-metadata": "^0.1.13"
+  },
+  "devDependencies": {
+    "@types/jest": "^25.1.4",
+    "@types/node": "^13.9.3",
+    "jest": "^25.1.0",
+    "ts-jest": "^24.3.0",
+    "typescript": "^3.8.3"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "json",
+      "jsx",
+      "node"
+    ],
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "test/.*\\.(test|spec).(ts|tsx|js)$",
+    "collectCoverageFrom": [
+      "src/**/*.{js,jsx,tsx,ts}",
+      "!**/node_modules/**",
+      "!**/vendor/**"
+    ],
+    "coverageReporters": [
+      "json",
+      "lcov"
+    ]
+  }
+}
