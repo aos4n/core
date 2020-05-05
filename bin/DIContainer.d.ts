@@ -27,6 +27,7 @@ export declare class DIContainer {
     private createComponentInstance;
     private getParamInstances;
     private resolveAutowiredDependences;
+    private resolveValues;
     /**
      * 装载一个类型，但是不会实例化
      * @param _class 类型

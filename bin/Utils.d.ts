@@ -53,8 +53,10 @@ export declare class Utils {
      * @param target 配置类型
      */
     static getConfigValue<T>(target: new (...args: any[]) => T): T;
+    static getValueByField<T>(type: Function | (new (...args: any[]) => T), field: string): T;
+    static getConfigOriginalValue(): any;
     /**
-     * 尝试require一个文件，如果失败，会返回null
+     * 尝试require一个文件，只会require js、json、ts文件
      * @param filePath 文件路径
      */
     static tryRequire(filePath: string): any;

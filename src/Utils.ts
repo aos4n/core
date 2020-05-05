@@ -1,6 +1,7 @@
 import fs = require('fs');
 import path = require('path');
 import { Component } from './Component';
+import { TypeConvertException } from './TypeConvert';
 import { TypeSpecifiedMap } from './TypeSpecifiedMap';
 import { TypeSpecifiedType } from './TypeSpecifiedType';
 
@@ -127,24 +128,40 @@ export class Utils {
      * @param target 配置类型
      */
     static getConfigValue<T>(target: new (...args: any[]) => T): T {
-        let configFilePath = Utils.getConfigFilename()
-        let originalVal = this.tryRequire(configFilePath)
+        let originalVal = this.getConfigOriginalValue()
         let newVal = Utils.getValBySectionStr(originalVal, Reflect.getMetadata('$configField', target.prototype))
         return Utils.getTypeSpecifiedValue(target, newVal, new target())
     }
 
+    static getValueByField<T>(type: Function | (new (...args: any[]) => T), field: string) {
+        let originalVal = this.getConfigOriginalValue()
+        let newVal = Utils.getValBySectionStr(originalVal, field)
+        return Utils.getTypeSpecifiedValue(type, newVal)
+    }
+
+    static getConfigOriginalValue() {
+        let configFilePath = Utils.getConfigFilename()
+        let originalVal = this.tryRequire(configFilePath)
+        return originalVal
+    }
+
     /**
-     * 尝试require一个文件，如果失败，会返回null
+     * 尝试require一个文件，只会require js、json、ts文件
      * @param filePath 文件路径
      */
     static tryRequire(filePath: string) {
-        if (filePath.endsWith('.map') || filePath.endsWith('.d.ts')) {
+        if (filePath.endsWith('.d.ts')) {
+            return null
+        }
+        if (!filePath.endsWith('.js') && !filePath.endsWith('.json') && !filePath.endsWith('.ts')) {
             return null
         }
         try {
             return require(filePath)
         } catch (error) {
-            return null
+            if (fs.existsSync(filePath)) {
+                throw error
+            }
         }
     }
 
@@ -182,6 +199,14 @@ export class Utils {
         }
         switch (type) {
             case Number:
+                if (sourceVal === '') {
+                    return null
+                }
+                let num = type(sourceVal)
+                if (Number.isNaN(num)) {
+                    throw new TypeConvertException(sourceVal, type)
+                }
+                return num
             case Boolean:
                 if (sourceVal === '') {
                     return null
@@ -193,24 +218,27 @@ export class Utils {
                 if (sourceVal === '') {
                     return null
                 }
-                return new Date(sourceVal) as any
+                let dt = new Date(sourceVal) as any
+                if (dt.toString() === 'Invalid Date') {
+                    throw new TypeConvertException(sourceVal, type)
+                }
+                return dt
             default:
                 let newVal = Reflect.construct(type, [])
-                let sourceFields = Reflect.getMetadata('$sourceFields', type.prototype) || {}
+                let typedFields = Reflect.getMetadata('$typedFields', type.prototype) || {}
                 for (let sourceField in sourceVal) {
                     let sourceFieldVal = sourceVal[sourceField]
-                    let typeSpecifiedMap: TypeSpecifiedMap = sourceFields[sourceField] as TypeSpecifiedMap
+                    let typeSpecifiedMap: TypeSpecifiedMap = typedFields[sourceField] as TypeSpecifiedMap
                     if (typeSpecifiedMap == null) {
                         newVal[sourceField] = sourceFieldVal
                     } else {
-                        let targetField = typeSpecifiedMap.targetName
                         if (typeSpecifiedMap.typeSpecifiedType == TypeSpecifiedType.General) {
-                            newVal[targetField] = this.getTypeSpecifiedValue(typeSpecifiedMap.type, sourceFieldVal)
+                            newVal[sourceField] = this.getTypeSpecifiedValue(typeSpecifiedMap.type, sourceFieldVal)
                         } else if (typeSpecifiedMap.typeSpecifiedType == TypeSpecifiedType.Array) {
                             if (Array.isArray(sourceFieldVal)) {
-                                newVal[targetField] = sourceFieldVal.map((a: any) => this.getTypeSpecifiedValue(typeSpecifiedMap.type, a))
+                                newVal[sourceField] = sourceFieldVal.map((a: any) => this.getTypeSpecifiedValue(typeSpecifiedMap.type, a))
                             } else {
-                                newVal[targetField] = null
+                                newVal[sourceField] = null
                             }
                         }
                     }

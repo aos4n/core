@@ -1,6 +1,10 @@
+import { ScheduleRule } from './Alias';
 import { Component, Config, StartUp, Test } from './Component';
 import { InnerCachable } from './InnerCache';
 import { Utils } from './Utils';
+
+import schedule = require('node-schedule');
+schedule.scheduleJob('', function () { })
 
 /**
  * aos4n管理组件生命周期的容器，全局只会有一个实例
@@ -46,30 +50,37 @@ export class DIContainer {
         }
 
         let instancePromise = this.createComponentInstance(target)
-        this.componentInstanceMap.set(target, instancePromise)
 
         return instancePromise
     }
 
     private async createComponentInstance<T>(target: new (...args: any[]) => T): Promise<T> {
         if (!Reflect.getMetadata(Component, target.prototype)) {
-            throw new Error(`${target.name}没有被注册为可自动解析的组件，请至少添加@Component、@StartUp、@Controller、@Config等装饰器中的一种`)
+            throw new Error(`${target.name}没有被注册为可自动解析的组件，请至少添加@Component、@StartUp、@Config等装饰器中的一种`)
         }
 
         try {
             let instance = null
             if (Reflect.getMetadata(Config, target.prototype)) {
                 instance = Utils.getConfigValue(target)
-                this.componentInstanceMap.set(target, instance)
             } else {
                 instance = Reflect.construct(target, await this.getParamInstances(target))
-                this.componentInstanceMap.set(target, instance)
-                await this.resolveAutowiredDependences(instance)
+            }
 
-                let initMethod = Reflect.getMetadata('$initMethod', target.prototype)
-                if (initMethod) {
-                    await instance[initMethod]()
-                }
+            this.componentInstanceMap.set(target, instance)
+            await this.resolveAutowiredDependences(instance)
+            this.resolveValues(instance)
+
+            let initMethod = Reflect.getMetadata('$initMethod', target.prototype)
+            if (initMethod) {
+                await instance[initMethod]()
+            }
+
+            let $scheduleJobs = Reflect.getMetadata('$scheduleJobs', target.prototype)
+            if ($scheduleJobs) {
+                $scheduleJobs.forEach((a: { name: string, rule: ScheduleRule }) => {
+                    schedule.scheduleJob(a.rule, instance[a.name].bind(instance))
+                })
             }
 
             return instance
@@ -100,6 +111,16 @@ export class DIContainer {
                     let _Class = v()
                     instance[k] = await this.getComponentInstanceFromFactory(_Class as any)
                 }
+            }
+        }
+    }
+
+    private resolveValues(instance: any) {
+        let target = instance.__proto__.constructor
+        let valueMap = Reflect.getMetadata('$valueMap', target.prototype)
+        if (valueMap) {
+            for (let [k, v] of valueMap) {
+                instance[k] = Utils.getValueByField(v.type, v.field)
             }
         }
     }
@@ -174,41 +195,64 @@ export class DIContainer {
     }
 
     private async test() {
+        if (process.argv.includes('-t') == false) {
+            return
+        }
         let testClassList = this.getComponentsByDecorator(Test)
         if (testClassList.length == 0) {
             return
+        }
+        let onlyList = testClassList.filter(a => Reflect.getMetadata('$only', a.prototype) == true)
+        if (onlyList.length > 0) {
+            testClassList = onlyList
         }
 
         console.log('Running tests...')
         let startTime = Date.now()
 
-        let passed = 0
-        let failed = 0
-        let total = 0
+        let failCount = 0
+        let results: { name: string, passed: boolean, error?: Error | any, period?: number }[] = []
         for (let _Class of testClassList) {
             let _prototype = _Class.prototype
             let testInstance = await this.getComponentInstanceFromFactory(_Class)
-            let testMethods = Reflect.getMetadata('$testMethods', _prototype)
-            if (!testMethods) {
+            let testMethods: string[] = Reflect.getMetadata('$testMethods', _prototype)
+            if (!testMethods || testMethods.length == 0) {
                 continue
             }
+            let onlyMethods = testMethods.filter(a => Reflect.getMetadata('$only', _prototype, a) == true)
+            if (onlyMethods.length > 0) {
+                testMethods = onlyMethods
+            }
             for (let testMethod of testMethods) {
+                let result: { name: string, passed: boolean, error?: Error | any, period?: number } = {
+                    name: _Class.name + '/' + testMethod,
+                    passed: false
+                }
+                let startTime = Date.now()
                 try {
                     await testInstance[testMethod]()
-                    passed += 1
+                    result.passed = true
                 } catch (error) {
-                    console.error(`Test failed at ${_Class.name}.${testMethod}`)
-                    console.trace(error.stack)
-                    failed += 1
+                    result.passed = false
+                    result.error = error
+                    failCount += 1
                 } finally {
-                    total += 1
+                    let endTime = Date.now()
+                    let ts = endTime - startTime
+                    result.period = ts
+                    results.push(result)
                 }
             }
         }
 
         let endTime = Date.now()
-        console.log(`All tests ran in ${endTime - startTime}ms`)
-        console.table([{ passed, failed, total }])
+        results.forEach(a => {
+            console.log(`%c${a.passed ? 'PASS' : 'FAIL'}`, ` ${a.passed ? 'background: #00ff00;' : 'background: #ff0000; color: #fff'};`, `${a.name} in ${a.period}ms`)
+            if (a.error) {
+                console.error(a.error.stack)
+            }
+        })
+        console.log(`All tests ran in ${endTime - startTime}ms, total: ${results.length}, pass: ${results.length - failCount}, ${failCount > 0 ? '%c' : ''}fail: ${failCount}`, ...(failCount > 0 ? ['background: #ff0000; color: #fff'] : ''))
     }
 
     /**

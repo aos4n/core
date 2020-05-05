@@ -1,3 +1,4 @@
+import { ScheduleRule } from './Alias';
 /**
  * 指定此类为组件，生命周期将完全交给aos4n管理
  * 所有组件将在程序启动的时候初始化完成，所有组件初始化完成后，程序才会开始接受http请求
@@ -19,15 +20,24 @@ export declare function StartUp(order?: number): (target: new (...args: any[]) =
  */
 export declare function Config(field?: string): (target: new (...args: any[]) => {}) => void;
 /**
+ * 便捷的映射配置文件的某一个字段，不支持数组
+ * @param field 需要映射的节，默认映射整个文件
+ */
+export declare function Value(field: string): (target: any, name: string) => void;
+/**
  * 通过属性注入依赖的组件
  * @param type 目标类型或者产出目标类型的函数，
  * 对于循环依赖，需要使用产出目标类型的函数，否则会出现目标类型解析为undefined
  */
 export declare function Autowired(type: (new (...args: any[]) => {}) | (() => new (...args: any[]) => {})): (target: any, name: string) => void;
 /**
- * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法
+ * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法，不能用在Config组件中
  */
 export declare function Init(target: any, name: string): void;
+/**
+ * 标记一个方法为计划任务，支持异步方法，aos4n使用node-schedule来实现计划任务
+ */
+export declare function ScheduleJob(rule: ScheduleRule): (target: any, name: string) => void;
 /**
  * 标记一个类为测试类，程序启动完成后，将会自动执行这些测试
  */

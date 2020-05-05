@@ -6,7 +6,7 @@ class CacheNode {
         this.key = key;
         this.children = new Map();
         if (this.parent == null) {
-            setInterval(() => {
+            this.si = setInterval(() => {
                 this.check();
             }, 60000);
         }
@@ -52,6 +52,12 @@ class CacheNode {
         }
         return node.value;
     }
+    /**
+     * 主动设置缓存
+     * @param val 值
+     * @param maxAge 有效期，单位：毫秒，null表示永久有效
+     * @param keys 结点路径
+     */
     set(val, maxAge, ...keys) {
         let [key, ..._keys] = [...keys];
         let node = this.children.get(key);

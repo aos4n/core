@@ -1,3 +1,4 @@
+import { ScheduleRule } from './Alias';
 import { Utils } from './Utils';
 
 /**
@@ -38,6 +39,19 @@ export function Config(field: string = '') {
 }
 
 /**
+ * 便捷的映射配置文件的某一个字段，不支持数组
+ * @param field 需要映射的节，默认映射整个文件
+ */
+export function Value(field: string) {
+    return function (target: any, name: string) {
+        let $valueMap = Reflect.getMetadata('$valueMap', target) || new Map()
+        let type = Reflect.getMetadata('design:type', target, name)
+        $valueMap.set(name, { field, type })
+        Reflect.defineMetadata('$valueMap', $valueMap, target)
+    }
+}
+
+/**
  * 通过属性注入依赖的组件
  * @param type 目标类型或者产出目标类型的函数，
  * 对于循环依赖，需要使用产出目标类型的函数，否则会出现目标类型解析为undefined
@@ -56,10 +70,24 @@ export function Autowired(type: (new (...args: any[]) => {}) | (() => new (...ar
 }
 
 /**
- * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法
+ * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法，不能用在Config组件中
  */
 export function Init(target: any, name: string) {
     Reflect.defineMetadata('$initMethod', name, target)
+}
+
+/**
+ * 标记一个方法为计划任务，支持异步方法，aos4n使用node-schedule来实现计划任务
+ */
+export function ScheduleJob(rule: ScheduleRule) {
+    return function (target: any, name: string) {
+        let $scheduleJobs = Reflect.getMetadata('$scheduleJobs', target) || []
+        $scheduleJobs.push({
+            name,
+            rule
+        })
+        Reflect.defineMetadata('$scheduleJobs', $scheduleJobs, target)
+    }
 }
 
 /**

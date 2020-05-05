@@ -2,9 +2,10 @@ export class CacheNode {
     private _value: any
     private expireTime: number
     private children: Map<any, CacheNode> = new Map()
+    private si: NodeJS.Timeout
     constructor(private readonly parent?: CacheNode, private readonly key?: any) {
         if (this.parent == null) {
-            setInterval(() => {
+            this.si = setInterval(() => {
                 this.check()
             }, 60000)
         }
@@ -56,6 +57,12 @@ export class CacheNode {
         return node.value
     }
 
+    /**
+     * 主动设置缓存
+     * @param val 值
+     * @param maxAge 有效期，单位：毫秒，null表示永久有效
+     * @param keys 结点路径
+     */
     set(val: any, maxAge: number, ...keys: any[]) {
         let [key, ..._keys] = [...keys]
 

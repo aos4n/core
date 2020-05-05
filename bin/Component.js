@@ -39,6 +39,19 @@ function Config(field = '') {
 }
 exports.Config = Config;
 /**
+ * 便捷的映射配置文件的某一个字段，不支持数组
+ * @param field 需要映射的节，默认映射整个文件
+ */
+function Value(field) {
+    return function (target, name) {
+        let $valueMap = Reflect.getMetadata('$valueMap', target) || new Map();
+        let type = Reflect.getMetadata('design:type', target, name);
+        $valueMap.set(name, { field, type });
+        Reflect.defineMetadata('$valueMap', $valueMap, target);
+    };
+}
+exports.Value = Value;
+/**
  * 通过属性注入依赖的组件
  * @param type 目标类型或者产出目标类型的函数，
  * 对于循环依赖，需要使用产出目标类型的函数，否则会出现目标类型解析为undefined
@@ -56,12 +69,26 @@ function Autowired(type) {
 }
 exports.Autowired = Autowired;
 /**
- * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法
+ * 在组件中标记一个方法，使其在组件初始化时执行，支持异步方法，不能用在Config组件中
  */
 function Init(target, name) {
     Reflect.defineMetadata('$initMethod', name, target);
 }
 exports.Init = Init;
+/**
+ * 标记一个方法为计划任务，支持异步方法，aos4n使用node-schedule来实现计划任务
+ */
+function ScheduleJob(rule) {
+    return function (target, name) {
+        let $scheduleJobs = Reflect.getMetadata('$scheduleJobs', target) || [];
+        $scheduleJobs.push({
+            name,
+            rule
+        });
+        Reflect.defineMetadata('$scheduleJobs', $scheduleJobs, target);
+    };
+}
+exports.ScheduleJob = ScheduleJob;
 /**
  * 标记一个类为测试类，程序启动完成后，将会自动执行这些测试
  */

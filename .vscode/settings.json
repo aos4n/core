@@ -1,0 +1,11 @@
+{
+    "search.exclude": {
+        ".*": true,
+        "bin": true,
+        "package-lock.json": true
+    },
+    "files.exclude": {
+        "node_modules": true,
+        ".VSCodeCounter": true
+    }
+}
