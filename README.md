@@ -2,7 +2,7 @@
 aos4n-core是aos4n系列的基础框架，集成了Component、Config、TypeConvert、ScheduleJob等基础功能
 # 安装
 ```bash
-npm i @aos4n/core
+npm i aos4n/core
 ```
 # 使用
 ```typescript
