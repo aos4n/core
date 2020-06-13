@@ -16,7 +16,7 @@ getContainer().runAsync()
 ## @StartUp
 使用@StartUp装饰器标记一个类为预启动组件，并且传入一个可选的order参数
 ```typescript
-import { StartUp, Init } from "dogboot";
+import { StartUp, Init } from "aos4n-core";
 
 @StartUp()
 export class StartUp1 {
@@ -53,7 +53,7 @@ field参数表示映射器映射的配置节，如果不传，表示整个配置
 ## @Component
 使用@Component标记一个类为组件
 ```typescript
-import { Component, Init } from "dogboot";
+import { Component, Init } from "aos4n-core";
 
 @Component
 export class HomeService {
